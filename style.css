@@ -628,7 +628,8 @@ tr:has(#timeline-header) th {
     box-sizing: border-box;
     transition: all 0.2s ease;
     z-index: 20;
-    margin: 0; /* Asegurar que no haya margen */
+    margin: 0;
+    left: 0; /* Asegurar que no haya desfase por padding heredado */
 }
 
 /* Eliminar bordes de celdas de periodos superiores para que no haya líneas rojas/grises extra */

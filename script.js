@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                html += `<div class="month-band ${rotatedClass}" style="left:calc(${PADDING_X}px + var(--day-width) * ${leftVd}); width:calc(var(--day-width) * ${Math.max(0.01, rightVd - leftVd)});">${finalLabel}</div>`;
+                html += `<div class="month-band ${rotatedClass}" style="left:calc(${PADDING_X}px + var(--day-width) * ${leftVd}); width:calc(var(--day-width) * ${Math.max(0, rightVd - leftVd)} + 1px);">${finalLabel}</div>`;
             }
             headerEl.innerHTML = html;
         }
@@ -542,9 +542,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const periods = [];
                 let cur = new Date(minDate.getFullYear(), 0, 1);
                 while (cur <= maxDate) {
+                    const yearStart = new Date(cur.getFullYear(), 0, 1);
+                    const yearEnd = new Date(cur.getFullYear(), 11, 31, 23, 59, 59);
                     periods.push({
-                        start: new Date(cur.getFullYear(), 0, 1),
-                        end:   new Date(cur.getFullYear(), 11, 31),
+                        start: yearStart,
+                        end:   yearEnd,
                         label: `${cur.getFullYear()}`
                     });
                     cur = new Date(cur.getFullYear() + 1, 0, 1);
@@ -564,9 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const periods = [];
                 let cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
                 while (cur <= maxDate) {
+                    const monthStart = new Date(cur.getFullYear(), cur.getMonth(), 1);
+                    const monthEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0, 23, 59, 59);
                     periods.push({
-                        start: new Date(cur.getFullYear(), cur.getMonth(), 1),
-                        end:   new Date(cur.getFullYear(), cur.getMonth() + 1, 0),
+                        start: monthStart,
+                        end:   monthEnd,
                         label: `${MONTHS_ES[cur.getMonth()]}-${cur.getFullYear()}`
                     });
                     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
@@ -588,9 +592,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 let cur = new Date(startYear, startQ * 3, 1);
                 while (cur <= maxDate) {
                     const qIdx  = Math.floor(cur.getMonth() / 3);
-                    const qEnd  = new Date(cur.getFullYear(), qIdx * 3 + 3, 0);
+                    const qStart = new Date(cur.getFullYear(), qIdx * 3, 1);
+                    const qEnd  = new Date(cur.getFullYear(), qIdx * 3 + 3, 0, 23, 59, 59);
                     periods.push({
-                        start: new Date(cur.getFullYear(), qIdx * 3, 1),
+                        start: qStart,
                         end:   qEnd,
                         label: `${ROMAN[qIdx]} Trimestre ${cur.getFullYear()}`,
                         shortLabel: `${ROMAN[qIdx]} Trim.`
@@ -614,9 +619,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 let cur = new Date(startYear, startS * 6, 1);
                 while (cur <= maxDate) {
                     const sIdx = cur.getMonth() < 6 ? 0 : 1;
-                    const sEnd = new Date(cur.getFullYear(), sIdx * 6 + 6, 0);
+                    const sStart = new Date(cur.getFullYear(), sIdx * 6, 1);
+                    const sEnd = new Date(cur.getFullYear(), sIdx * 6 + 6, 0, 23, 59, 59);
                     periods.push({
-                        start: new Date(cur.getFullYear(), sIdx * 6, 1),
+                        start: sStart,
                         end:   sEnd,
                         label: `${ROMAN[sIdx]} Semestre ${cur.getFullYear()}`,
                         shortLabel: `${ROMAN[sIdx]} Sem.`

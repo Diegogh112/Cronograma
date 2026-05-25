@@ -50,28 +50,121 @@
     --input-th-bg: #0f172a;
 }
 
-[data-theme="vibrant"] {
-    --bg-color: #fffbeb;
-    --panel-bg: #ffedd5;
-    --border-color: #fdba74;
-    --border-light: #ffedd5;
-    --text-main: #431407;
-    --text-muted: #9a3412;
-    --primary: #ea580c;
-    --primary-hover: #c2410c;
-    
-    --planned-color: #f43f5e;
-    --actual-color: #8b5cf6;
+[data-theme="corporate"] {
+    /* Estilo Excel corporativo: grises azulados, encabezados azul oscuro */
+    --bg-color: #f0f4f8;
+    --panel-bg: #dce6f0;
+    --border-color: #9ab0c8;
+    --border-light: #c8d8e8;
+    --text-main: #1a2a3a;
+    --text-muted: #4a6278;
+    --primary: #1f4e79;
+    --primary-hover: #163a5c;
 
-    --phase-planned-bg: #fed7aa;
-    --phase-dev-bg: #fcd34d;
-    --phase-qa-bg: #fbcfe8;
-    --phase-prod-bg: #d9f99d;
-    --phase-planned-border: #9a3412;
-    --phase-actual-fill: #10b981;
-    --table-header-bg: #fffbeb;
-    --input-table-bg: #fff7ed;
-    --input-th-bg: #ffedd5;
+    --phase-planned-bg: #b8cfe0;
+    --phase-dev-bg: #a0bcd4;
+    --phase-qa-bg: #c5d8e8;
+    --phase-prod-bg: #8fafc8;
+    --phase-planned-border: #1f4e79;
+    --phase-actual-fill: #2e75b6;
+    --table-header-bg: #1f4e79;
+    --input-table-bg: #eaf0f6;
+    --input-th-bg: #c8d8e8;
+
+    /* Header rows use the dark blue */
+    --header-text: #ffffff;
+    --header-bg: #1f4e79;
+    --month-band-bg: #2e75b6;
+    --month-band-text: #ffffff;
+    --date-marker-color: #ffffff;
+    --date-line-color: #9ab0c8;
+}
+
+[data-theme="red"] {
+    /* Estilo rojo corporativo: encabezados rojos, fondo blanco */
+    --bg-color: #ffffff;
+    --panel-bg: #fef2f2;
+    --border-color: #fca5a5;
+    --border-light: #fee2e2;
+    --text-main: #1c1c1c;
+    --text-muted: #6b2020;
+    --primary: #b91c1c;
+    --primary-hover: #991b1b;
+
+    --phase-planned-bg: #fecaca;
+    --phase-dev-bg: #fca5a5;
+    --phase-qa-bg: #fee2e2;
+    --phase-prod-bg: #f87171;
+    --phase-planned-border: #b91c1c;
+    --phase-actual-fill: #dc2626;
+    --table-header-bg: #b91c1c;
+    --input-table-bg: #ffffff;
+    --input-th-bg: #fee2e2;
+
+    --header-text: #ffffff;
+    --header-bg: #b91c1c;
+    --month-band-bg: #dc2626;
+    --month-band-text: #ffffff;
+    --date-marker-color: #ffffff;
+    --date-line-color: #fca5a5;
+}
+
+[data-theme="forest"] {
+    /* Estilo bosque: verdes naturales, tonos tierra */
+    --bg-color: #f0fdf4;
+    --panel-bg: #dcfce7;
+    --border-color: #86efac;
+    --border-light: #bbf7d0;
+    --text-main: #14532d;
+    --text-muted: #166534;
+    --primary: #15803d;
+    --primary-hover: #166534;
+
+    --phase-planned-bg: #bbf7d0;
+    --phase-dev-bg: #86efac;
+    --phase-qa-bg: #d1fae5;
+    --phase-prod-bg: #6ee7b7;
+    --phase-planned-border: #15803d;
+    --phase-actual-fill: #059669;
+    --table-header-bg: #15803d;
+    --input-table-bg: #f0fdf4;
+    --input-th-bg: #dcfce7;
+
+    --header-text: #ffffff;
+    --header-bg: #15803d;
+    --month-band-bg: #166534;
+    --month-band-text: #ffffff;
+    --date-marker-color: #14532d;
+    --date-line-color: #86efac;
+}
+
+[data-theme="navy"] {
+    /* Estilo marino: azul profundo, acentos cyan */
+    --bg-color: #0a1628;
+    --panel-bg: #0f2040;
+    --border-color: #1e3a5f;
+    --border-light: #162d4a;
+    --text-main: #e2eaf4;
+    --text-muted: #7fa8cc;
+    --primary: #0ea5e9;
+    --primary-hover: #0284c7;
+
+    --phase-planned-bg: #1e3a5f;
+    --phase-dev-bg: #1a3352;
+    --phase-qa-bg: #0f2a45;
+    --phase-prod-bg: #243d60;
+    --phase-planned-border: #0ea5e9;
+    --phase-actual-fill: #38bdf8;
+    --table-header-bg: #0f2040;
+    --input-table-bg: #0f2040;
+    --input-th-bg: #0a1628;
+
+    --header-text: #e2eaf4;
+    --header-bg: #0f2040;
+    --month-band-bg: #1e3a5f;
+    --month-band-text: #7fa8cc;
+    --date-marker-color: #7fa8cc;
+    --date-line-color: #1e3a5f;
 }
 
 * {
@@ -462,11 +555,41 @@ button:hover { background: var(--primary-hover); }
     justify-content: center;
     font-size: 11px;
     font-weight: 700;
-    color: var(--text-main);
-    background: var(--panel-bg);
+    color: var(--month-band-text, var(--text-main));
+    background: var(--month-band-bg, var(--panel-bg));
     overflow: hidden;
     white-space: nowrap;
     box-sizing: border-box;
+}
+
+/* Themed gantt table headers */
+[data-theme="corporate"] .gantt-table thead th,
+[data-theme="red"] .gantt-table thead th,
+[data-theme="forest"] .gantt-table thead th {
+    background: var(--header-bg);
+    color: var(--header-text);
+    border-bottom-color: var(--header-bg);
+}
+
+[data-theme="corporate"] .gantt-table thead .col-main,
+[data-theme="red"] .gantt-table thead .col-main,
+[data-theme="forest"] .gantt-table thead .col-main {
+    background: var(--header-bg);
+    color: var(--header-text);
+}
+
+[data-theme="corporate"] .date-marker,
+[data-theme="red"] .date-marker,
+[data-theme="forest"] .date-marker,
+[data-theme="navy"] .date-marker {
+    color: var(--date-marker-color);
+}
+
+[data-theme="corporate"] .date-line,
+[data-theme="red"] .date-line,
+[data-theme="forest"] .date-line,
+[data-theme="navy"] .date-line {
+    border-left-color: var(--date-line-color);
 }
 
 #months-header {

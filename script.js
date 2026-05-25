@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSelector = document.getElementById('theme-selector');
 
     if (themeSelector) {
-        const savedTheme = localStorage.getItem('ganttTheme') || 'light';
+        const VALID_THEMES = ['light', 'dark', 'corporate', 'red', 'forest', 'navy'];
+        const savedTheme = VALID_THEMES.includes(localStorage.getItem('ganttTheme'))
+            ? localStorage.getItem('ganttTheme')
+            : 'light';
         themeSelector.value = savedTheme;
         document.body.setAttribute('data-theme', savedTheme);
 
@@ -23,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Restore toggle states from localStorage
-    const TOGGLE_IDS = ['toggle-percent', 'toggle-months', 'toggle-quarters', 'toggle-semesters'];
+    const TOGGLE_IDS = ['toggle-percent', 'toggle-legend', 'toggle-months', 'toggle-quarters', 'toggle-semesters'];
     TOGGLE_IDS.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -33,8 +36,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Legend toggle — applies immediately without re-render
+    const toggleLegend = document.getElementById('toggle-legend');
+    function applyLegendVisibility() {
+        const mainLegend = document.getElementById('main-legend');
+        if (!mainLegend) return;
+        if (toggleLegend && !toggleLegend.checked) {
+            mainLegend.style.display = 'none';
+        }
+        // When checked, only show if chart is already rendered
+        if (toggleLegend && toggleLegend.checked && tableWrapper.style.display !== 'none') {
+            mainLegend.style.display = 'flex';
+        }
+    }
+    if (toggleLegend) {
+        toggleLegend.addEventListener('change', () => {
+            localStorage.setItem('toggle-legend', toggleLegend.checked);
+            applyLegendVisibility();
+        });
+    }
+
     // Re-render on toggle change if chart is already visible
-    TOGGLE_IDS.forEach(id => {
+    ['toggle-percent', 'toggle-months', 'toggle-quarters', 'toggle-semesters'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', () => {
@@ -316,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         emptyState.style.display = 'none';
 
         const mainLegend = document.getElementById('main-legend');
-        if (mainLegend) mainLegend.style.display = 'flex';
+        if (mainLegend) mainLegend.style.display = (document.getElementById('toggle-legend')?.checked ?? true) ? 'flex' : 'none';
 
         tableWrapper.style.display = 'block';
 
@@ -586,6 +609,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function drawPhaseBlock(phase) {
             if (!phase.start || !phase.end) return '';
+
+            // Si no hay % planificado ni % real, mostrar barra llena al 100%
+            if (phase.planned === null && phase.actual === null) {
+                phase.planned = 100;
+            }
             const leftDays = mapVirtualDays(phase.start.getTime());
             const endDays = mapVirtualDays(phase.end.getTime());
             const durationWidthFixed = Math.max(0.01, endDays - leftDays);
@@ -623,7 +651,12 @@ document.addEventListener('DOMContentLoaded', () => {
         deliverables.forEach(deliverable => {
             const hasPhases = deliverable.phases.length > 0;
             const hasParentBars = deliverable.start !== null && deliverable.end !== null;
-            
+
+            // Si no hay % planificado ni % real, mostrar barra llena al 100% (planificado)
+            if (hasParentBars && deliverable.planned === null && deliverable.actual === null) {
+                deliverable.planned = 100;
+            }
+
             let rowsForDiv = 0;
             if (hasParentBars) {
                 if (deliverable.planned !== null) rowsForDiv += 1;

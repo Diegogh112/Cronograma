@@ -381,40 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (semestersHeaderRow) semestersHeaderRow.style.display = showSemesters ? '' : 'none';
         if (yearsHeaderRow)     yearsHeaderRow.style.display     = showYears     ? '' : 'none';
 
-        // ── Logo Management (Solo visual, no en descarga) ────────────────────
-        const headerRowsInfo = [
-            { id: 'years-header-row', visible: showYears },
-            { id: 'semesters-header-row', visible: showSemesters },
-            { id: 'quarters-header-row', visible: showQuarters },
-            { id: 'months-header-row', visible: showMonths }
-        ];
-
-        // Limpiar contenido de todas las celdas col-main de la cabecera
+        // Clear header th content
         document.querySelectorAll('.gantt-table thead .col-main').forEach(th => {
             if (th.id !== 'editable-column-name') th.innerHTML = '';
         });
-
-        const activeRows = headerRowsInfo.filter(r => r.visible);
-        if (activeRows.length > 0) {
-            // Inyectamos el logo en la primera celda visible
-            const firstTh = document.querySelector(`#${activeRows[0].id} .col-main`);
-            if (firstTh) {
-                // El logo se posicionará de forma absoluta respecto a este th para flotar sobre el espacio
-                const totalHeight = activeRows.length * 35; // Cada fila mide 35px
-                firstTh.style.position = 'relative';
-                firstTh.innerHTML = `
-                    <div class="logo-overlay" style="height: ${totalHeight}px;">
-                        <img src="images/logobn-compartir (2).png" alt="BN" class="logo-bn-img" onerror="this.style.display='none'">
-                    </div>
-                `;
-            }
-        }
-        // ─────────────────────────────────────────────────────────────────────
-
-        // Clear header th content (redundante, ya se hizo arriba pero para mantener estructura)
-        // document.querySelectorAll('.gantt-table thead .col-main').forEach(th => {
-        //     if (th.id !== 'editable-column-name') th.innerHTML = '';
-        // });
 
         // Determinar si hay algún encabezado superior activo
         const anyPeriodActive = showMonths || showQuarters || showSemesters || showYears;
@@ -1062,12 +1032,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const clonedBody = clonedDoc.body;
                     clonedBody.setAttribute('data-theme', document.body.getAttribute('data-theme'));
                     
-                    // Ocultar el logo en la descarga como se solicitó
-                    const clonedLogoOverlay = clonedDoc.querySelector('.logo-overlay');
-                    if (clonedLogoOverlay) {
-                        clonedLogoOverlay.style.display = 'none';
-                    }
-
                     const clonedContainer = clonedDoc.getElementById('gantt-container-to-export');
                     if (clonedContainer) {
                         clonedContainer.style.width = totalCaptureWidth + 'px';

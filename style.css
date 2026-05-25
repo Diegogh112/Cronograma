@@ -653,27 +653,6 @@ tr:has(#timeline-header) th {
     display: none !important;
 }
 
-.logo-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    pointer-events: none;
-    overflow: hidden;
-    padding: 10px;
-    box-sizing: border-box;
-}
-
-.logo-bn-img {
-    max-width: 90%;
-    max-height: 90%;
-    object-fit: contain;
-}
-
 .main-column-header {
     background: var(--header-column-bg) !important;
     color: var(--header-column-text) !important;

@@ -25,8 +25,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Restore editable header from localStorage
+    const editableHeader = document.getElementById('editable-column-name');
+    if (editableHeader) {
+        const savedHeader = localStorage.getItem('ganttColumnHeader');
+        if (savedHeader) editableHeader.innerText = savedHeader;
+        editableHeader.addEventListener('input', () => {
+            localStorage.setItem('ganttColumnHeader', editableHeader.innerText);
+        });
+    }
+
     // Restore toggle states from localStorage
-    const TOGGLE_IDS = ['toggle-percent', 'toggle-legend', 'toggle-months', 'toggle-quarters', 'toggle-semesters'];
+    const TOGGLE_IDS = ['toggle-percent', 'toggle-legend', 'toggle-months', 'toggle-quarters', 'toggle-semesters', 'toggle-years', 'toggle-dates', 'toggle-cylindrical'];
     TOGGLE_IDS.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -57,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Re-render on toggle change if chart is already visible
-    ['toggle-percent', 'toggle-months', 'toggle-quarters', 'toggle-semesters'].forEach(id => {
+    ['toggle-percent', 'toggle-months', 'toggle-quarters', 'toggle-semesters', 'toggle-years', 'toggle-dates', 'toggle-cylindrical'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', () => {
@@ -348,14 +358,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const showMonths    = document.getElementById('toggle-months')?.checked    ?? false;
         const showQuarters  = document.getElementById('toggle-quarters')?.checked  ?? false;
         const showSemesters = document.getElementById('toggle-semesters')?.checked ?? false;
+        const showYears     = document.getElementById('toggle-years')?.checked     ?? false;
+        const showDates     = document.getElementById('toggle-dates')?.checked     ?? true;
+        const isCylindrical = document.getElementById('toggle-cylindrical')?.checked ?? false;
+
+        // Apply cylindrical class to table
+        const ganttTable = document.getElementById('gantt-table');
+        if (ganttTable) {
+            if (isCylindrical) ganttTable.classList.add('cylindrical-bars');
+            else ganttTable.classList.remove('cylindrical-bars');
+        }
 
         // Show/hide period header rows
         const monthsHeaderRow    = document.getElementById('months-header-row');
         const quartersHeaderRow  = document.getElementById('quarters-header-row');
         const semestersHeaderRow = document.getElementById('semesters-header-row');
+        const yearsHeaderRow     = document.getElementById('years-header-row');
+        const datesHeaderRow     = timelineHeader.parentElement; // The row containing timelineHeader
+
         if (monthsHeaderRow)    monthsHeaderRow.style.display    = showMonths    ? '' : 'none';
         if (quartersHeaderRow)  quartersHeaderRow.style.display  = showQuarters  ? '' : 'none';
         if (semestersHeaderRow) semestersHeaderRow.style.display = showSemesters ? '' : 'none';
+        if (yearsHeaderRow)     yearsHeaderRow.style.display     = showYears     ? '' : 'none';
+
+        // Determinar si hay algún encabezado superior activo
+        const anyPeriodActive = showMonths || showQuarters || showSemesters || showYears;
+        if (anyPeriodActive) {
+            timelineHeader.classList.add('headers-active');
+        } else {
+            timelineHeader.classList.remove('headers-active');
+        }
+
+        // No ocultamos el datesHeaderRow por completo para mantener las líneas verticales (date-line)
+        if (datesHeaderRow) {
+            if (showDates) {
+                datesHeaderRow.style.display = '';
+                datesHeaderRow.classList.remove('dates-hidden');
+            } else {
+                datesHeaderRow.style.display = '';
+                datesHeaderRow.classList.add('dates-hidden');
+            }
+        }
 
         // Dynamic exact width compression locking the chart inside horizontal view
         const targetWrapper = document.getElementById('table-wrapper');
@@ -448,10 +491,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // ── Helper: build period bands ────────────────────────────────────────
         const ROMAN = ['I','II','III','IV','V','VI'];
 
-        function buildPeriodBands(headerEl, periods) {
-            // periods: array of { start: Date, end: Date, label: string }
+        function buildPeriodBands(headerEl, periods, type = '') {
             if (!headerEl) return;
-            headerEl.style.minWidth = `calc(${PADDING_X * 2}px + var(--day-width) * ${totalVisualDays})`;
+            // Quitamos el minWidth fijo para evitar que el fondo se extienda más allá de las bandas reales
+            headerEl.style.minWidth = '0'; 
             let html = '';
             for (const p of periods) {
                 const bandStart = p.start < minDate ? minDate : p.start;
@@ -459,9 +502,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bandStart > maxDate || bandEnd < minDate) continue;
                 const leftVd  = mapVirtualDays(bandStart.getTime());
                 const rightVd = mapVirtualDays(bandEnd.getTime());
-                html += `<div class="month-band" style="left:calc(${PADDING_X}px + var(--day-width) * ${leftVd}); width:calc(var(--day-width) * ${Math.max(0.01, rightVd - leftVd)});">${p.label}</div>`;
+                const widthPx = (rightVd - leftVd) * dynamicDayWidth;
+
+                let finalLabel = p.label;
+                let rotatedClass = '';
+
+                if (type === 'month') {
+                    // Si el mes no cabe (aprox 60px para "Ene-2026"), rotar
+                    if (widthPx < 60) {
+                        rotatedClass = 'rotated';
+                        finalLabel = `<span>${p.label}</span>`;
+                    }
+                } else if (type === 'quarter') {
+                    // Si el trimestre no cabe completo, abreviar
+                    if (widthPx < 120) {
+                        finalLabel = p.shortLabel || p.label;
+                    }
+                } else if (type === 'semester') {
+                    // Si el semestre no cabe completo, abreviar
+                    if (widthPx < 120) {
+                        finalLabel = p.shortLabel || p.label;
+                    }
+                }
+
+                html += `<div class="month-band ${rotatedClass}" style="left:calc(${PADDING_X}px + var(--day-width) * ${leftVd}); width:calc(var(--day-width) * ${Math.max(0.01, rightVd - leftVd)});">${finalLabel}</div>`;
             }
             headerEl.innerHTML = html;
+        }
+
+        // Build year bands
+        const yearsHeader = document.getElementById('years-header');
+        if (yearsHeader) {
+            if (showYears) {
+                const periods = [];
+                let cur = new Date(minDate.getFullYear(), 0, 1);
+                while (cur <= maxDate) {
+                    periods.push({
+                        start: new Date(cur.getFullYear(), 0, 1),
+                        end:   new Date(cur.getFullYear(), 11, 31),
+                        label: `${cur.getFullYear()}`
+                    });
+                    cur = new Date(cur.getFullYear() + 1, 0, 1);
+                }
+                buildPeriodBands(yearsHeader, periods, 'year');
+            } else {
+                yearsHeader.innerHTML = '';
+                yearsHeader.style.minWidth = '';
+            }
         }
 
         // Build month bands
@@ -479,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
                 }
-                buildPeriodBands(monthsHeader, periods);
+                buildPeriodBands(monthsHeader, periods, 'month');
             } else {
                 monthsHeader.innerHTML = '';
                 monthsHeader.style.minWidth = '';
@@ -491,21 +578,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quartersHeader) {
             if (showQuarters) {
                 const periods = [];
-                // Quarter start months: 0, 3, 6, 9
                 let startYear = minDate.getFullYear();
-                let startQ    = Math.floor(minDate.getMonth() / 3); // 0-based quarter index
+                let startQ    = Math.floor(minDate.getMonth() / 3);
                 let cur = new Date(startYear, startQ * 3, 1);
                 while (cur <= maxDate) {
-                    const qIdx  = Math.floor(cur.getMonth() / 3); // 0-based
-                    const qEnd  = new Date(cur.getFullYear(), qIdx * 3 + 3, 0); // last day of quarter
+                    const qIdx  = Math.floor(cur.getMonth() / 3);
+                    const qEnd  = new Date(cur.getFullYear(), qIdx * 3 + 3, 0);
                     periods.push({
                         start: new Date(cur.getFullYear(), qIdx * 3, 1),
                         end:   qEnd,
-                        label: `${ROMAN[qIdx]} Trimestre ${cur.getFullYear()}`
+                        label: `${ROMAN[qIdx]} Trimestre ${cur.getFullYear()}`,
+                        shortLabel: `${ROMAN[qIdx]} Trim.`
                     });
                     cur = new Date(cur.getFullYear(), qIdx * 3 + 3, 1);
                 }
-                buildPeriodBands(quartersHeader, periods);
+                buildPeriodBands(quartersHeader, periods, 'quarter');
             } else {
                 quartersHeader.innerHTML = '';
                 quartersHeader.style.minWidth = '';
@@ -518,19 +605,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (showSemesters) {
                 const periods = [];
                 let startYear = minDate.getFullYear();
-                let startS    = minDate.getMonth() < 6 ? 0 : 1; // 0-based semester index
+                let startS    = minDate.getMonth() < 6 ? 0 : 1;
                 let cur = new Date(startYear, startS * 6, 1);
                 while (cur <= maxDate) {
                     const sIdx = cur.getMonth() < 6 ? 0 : 1;
-                    const sEnd = new Date(cur.getFullYear(), sIdx * 6 + 6, 0); // last day of semester
+                    const sEnd = new Date(cur.getFullYear(), sIdx * 6 + 6, 0);
                     periods.push({
                         start: new Date(cur.getFullYear(), sIdx * 6, 1),
                         end:   sEnd,
-                        label: `${ROMAN[sIdx]} Semestre ${cur.getFullYear()}`
+                        label: `${ROMAN[sIdx]} Semestre ${cur.getFullYear()}`,
+                        shortLabel: `${ROMAN[sIdx]} Sem.`
                     });
                     cur = new Date(cur.getFullYear(), sIdx * 6 + 6, 1);
                 }
-                buildPeriodBands(semestersHeader, periods);
+                buildPeriodBands(semestersHeader, periods, 'semester');
             } else {
                 semestersHeader.innerHTML = '';
                 semestersHeader.style.minWidth = '';
@@ -665,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasPhases) rowsForDiv += deliverable.phases.length;
 
             if (rowsForDiv === 0) {
-                htmlRows += `<tr><td class="col-main" style="border-bottom: 2px solid #94a3b8;">${deliverable.name}</td><td class="col-timeline" style="border-bottom: 2px solid #94a3b8;"></td></tr>`;
+                // Si no hay nada que mostrar (ni barras de padre ni fases), no renderizar la fila
                 return;
             }
 
@@ -900,6 +988,79 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') closePopover();
     });
     // ── End Color Picker ──────────────────────────────────────────────────────
+
+    const exportImgBtn = document.getElementById('export-img-btn');
+    if (exportImgBtn) {
+        exportImgBtn.addEventListener('click', () => {
+            const container = document.getElementById('gantt-container-to-export');
+            const ganttTable = document.getElementById('gantt-table');
+            if (!container || !ganttTable) return;
+
+            // Calcular altura real: logo-header + tabla
+            const headerHeight = document.querySelector('.gantt-header-top')?.offsetHeight || 0;
+            const tableHeight = ganttTable.offsetHeight;
+            const totalCaptureHeight = headerHeight + tableHeight + 10; // +10 de margen
+
+            // Asegurar que el scroll horizontal esté al inicio
+            const tableWrapper = document.getElementById('table-wrapper');
+            const originalScrollLeft = tableWrapper.scrollLeft;
+            tableWrapper.scrollLeft = 0;
+
+            html2canvas(container, {
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg-color'),
+                scale: 3, 
+                useCORS: true,
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                width: container.scrollWidth,
+                height: totalCaptureHeight, // Usar la altura real calculada
+                onclone: (clonedDoc) => {
+                    const clonedBody = clonedDoc.body;
+                    clonedBody.setAttribute('data-theme', document.body.getAttribute('data-theme'));
+                    
+                    const clonedContainer = clonedDoc.getElementById('gantt-container-to-export');
+                    if (clonedContainer) {
+                        clonedContainer.style.width = container.scrollWidth + 'px';
+                        clonedContainer.style.height = totalCaptureHeight + 'px';
+                        clonedContainer.style.overflow = 'hidden'; // Evitar scrollbars en captura
+                        clonedContainer.style.background = getComputedStyle(document.body).getPropertyValue('--bg-color');
+                    }
+
+                    // Limitar la altura de las líneas guía en el clon para que no estiren el scrollHeight
+                    clonedDoc.querySelectorAll('.date-line').forEach(line => {
+                        line.style.height = tableHeight + 'px';
+                    });
+
+                    // Forzar visualización del logo en el clon
+                    const clonedLogo = clonedDoc.getElementById('bn-logo');
+                    if (clonedLogo) {
+                        clonedLogo.style.display = 'block';
+                    }
+
+                    // Corregir rotación para html2canvas
+                    clonedDoc.querySelectorAll('.month-band.rotated').forEach(el => {
+                        el.style.writingMode = 'vertical-rl';
+                        el.style.transform = 'none'; 
+                        el.style.display = 'flex';
+                        el.style.alignItems = 'center';
+                        el.style.justifyContent = 'center';
+                        el.style.height = '80px';
+                    });
+                }
+            }).then(canvas => {
+                tableWrapper.scrollLeft = originalScrollLeft;
+                canvas.toBlob(blob => {
+                    saveAs(blob, `cronograma_${new Date().getTime()}.png`);
+                });
+                showToast("Imagen generada correctamente");
+            }).catch(err => {
+                tableWrapper.scrollLeft = originalScrollLeft;
+                console.error("Error al exportar imagen:", err);
+                showToast("Error al generar la imagen");
+            });
+        });
+    }
 
 }); // end DOMContentLoaded
 

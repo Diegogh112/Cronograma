@@ -61,27 +61,42 @@
                     <label class="toggle-label">
                         <input type="checkbox" id="toggle-percent" checked>
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        Mostrar % en barras
+                        % en barras
                     </label>
                     <label class="toggle-label">
                         <input type="checkbox" id="toggle-legend" checked>
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        Mostrar leyenda
+                        Leyenda
+                    </label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-dates" checked>
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Fechas exactas
                     </label>
                     <label class="toggle-label">
                         <input type="checkbox" id="toggle-months">
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        Mostrar meses en cronograma
+                        Meses
                     </label>
                     <label class="toggle-label">
                         <input type="checkbox" id="toggle-quarters">
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        Mostrar trimestres en cronograma
+                        Trimestres
                     </label>
                     <label class="toggle-label">
                         <input type="checkbox" id="toggle-semesters">
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        Mostrar semestres en cronograma
+                        Semestres
+                    </label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-years">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Agrupar por años
+                    </label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-cylindrical">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Barras cilíndricas
                     </label>
                 </div>
                 <div class="action-buttons">
@@ -121,33 +136,44 @@
 
             <!-- Scrollable Table Wrapper -->
             <div class="table-wrapper" id="table-wrapper" style="display: none;">
-                <table class="gantt-table" id="gantt-table">
-                    <thead>
-                        <tr id="semesters-header-row" style="display:none;">
-                            <th class="col-main" style="border-top:none; border-left:none;"></th>
-                            <th class="col-timeline" id="semesters-header"></th>
-                        </tr>
-                        <tr id="quarters-header-row" style="display:none;">
-                            <th class="col-main" style="border-top:none; border-left:none;"></th>
-                            <th class="col-timeline" id="quarters-header"></th>
-                        </tr>
-                        <tr id="months-header-row" style="display:none;">
-                            <th class="col-main" style="border-top:none; border-left:none;"></th>
-                            <th class="col-timeline" id="months-header">
-                                <!-- Month bands injected here -->
-                            </th>
-                        </tr>
-                        <tr>
-                            <th class="col-main" style="border-top:none; border-left:none;"></th>
-                            <th class="col-timeline" id="timeline-header">
-                                <!-- Dates injected here -->
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="gantt-tbody">
-                        <!-- Rows injected here -->
-                    </tbody>
-                </table>
+                <div id="gantt-container-to-export">
+                    <div class="gantt-header-top">
+                        <div class="logo-container">
+                            <img src="images/logo_bn.png" alt="Banco de la Nación" id="bn-logo" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                    <table class="gantt-table" id="gantt-table">
+                        <thead>
+                            <tr id="years-header-row" style="display:none;">
+                                <th class="col-main" style="border-top:none; border-left:none;"></th>
+                                <th class="col-timeline" id="years-header"></th>
+                            </tr>
+                            <tr id="semesters-header-row" style="display:none;">
+                                <th class="col-main" style="border-top:none; border-left:none;"></th>
+                                <th class="col-timeline" id="semesters-header"></th>
+                            </tr>
+                            <tr id="quarters-header-row" style="display:none;">
+                                <th class="col-main" style="border-top:none; border-left:none;"></th>
+                                <th class="col-timeline" id="quarters-header"></th>
+                            </tr>
+                            <tr id="months-header-row" style="display:none;">
+                                <th class="col-main" style="border-top:none; border-left:none;"></th>
+                                <th class="col-timeline" id="months-header">
+                                    <!-- Month bands injected here -->
+                                </th>
+                            </tr>
+                            <tr>
+                                 <th class="col-main main-column-header" id="editable-column-name" contenteditable="true">Actividad</th>
+                                 <th class="col-timeline" id="timeline-header">
+                                    <!-- Dates injected here -->
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="gantt-tbody">
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </main>

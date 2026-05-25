@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Dynamic exact width compression locking the chart inside horizontal view
         const targetWrapper = document.getElementById('table-wrapper');
-        const PADDING_X = 40; // Protect boundaries natively
+        const PADDING_X = 0; // Eliminado el espacio entre la columna y el inicio del cronograma
         const availablePixels = targetWrapper.clientWidth - 100 - (PADDING_X * 2);
         const dynamicDayWidth = Math.max(0.01, availablePixels / Math.max(1, totalVisualDays));
         document.documentElement.style.setProperty('--day-width', `${dynamicDayWidth}px`);
@@ -999,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Calcular altura real: logo-header + tabla
             const headerHeight = document.querySelector('.gantt-header-top')?.offsetHeight || 0;
             const tableHeight = ganttTable.offsetHeight;
-            const totalCaptureHeight = headerHeight + tableHeight + 10; // +10 de margen
+            const totalCaptureHeight = headerHeight + tableHeight + 40; // Aumentado el margen de 10 a 40 para que se vea la última fila
 
             // Asegurar que el scroll horizontal esté al inicio
             const tableWrapper = document.getElementById('table-wrapper');

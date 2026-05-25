@@ -674,12 +674,13 @@ tr:has(#timeline-header) th {
 }
 
 #months-header-row th {
-    height: auto;
-    min-height: 50px;
+    height: 35px; /* Altura delgada por defecto para meses horizontales */
+    min-height: 35px;
+    transition: height 0.2s ease;
 }
 
 #months-header-row th:has(.rotated) {
-    height: 90px;
+    height: 90px; /* Solo se expande si hay meses rotados */
 }
 
 #years-header-row th {

@@ -22,9 +22,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Restore toggle states from localStorage
+    const TOGGLE_IDS = ['toggle-percent', 'toggle-months', 'toggle-quarters', 'toggle-semesters'];
+    TOGGLE_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const saved = localStorage.getItem(id);
+        if (saved !== null) {
+            el.checked = saved === 'true';
+        }
+    });
+
+    // Re-render on toggle change if chart is already visible
+    TOGGLE_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                localStorage.setItem(id, el.checked);
+                if (chartDeliverablesCache.length > 0 && tableWrapper.style.display !== 'none') {
+                    generateBtn.click();
+                }
+            });
+        }
+    });
+
     const DAY_MS = 24 * 60 * 60 * 1000;
 
     let chartDeliverablesCache = [];
+    let barColors = JSON.parse(localStorage.getItem('ganttBarColors') || '{}');
 
     function parseDate(dateStr) {
         if (dateStr === undefined || dateStr === null || String(dateStr).trim() === '') return null;
@@ -51,10 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function parsePercent(val) {
-        if (!val) return 0;
-        let numStr = val.toString().trim().replace('%', '').replace(',', '.');
+        if (val === null || val === undefined) return null;
+        const trimmed = val.toString().trim();
+        if (trimmed === '') return null;
+        let numStr = trimmed.replace('%', '').replace(',', '.');
         let num = parseFloat(numStr);
-        return isNaN(num) ? 0 : Math.max(0, Math.min(100, num));
+        return isNaN(num) ? null : Math.max(0, Math.min(100, num));
     }
 
     function getDaysBetween(d1, d2) {
@@ -105,7 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initialData = localStorage.getItem('ganttVisionData');
     }
 
-    if (initialData) populateTable(initialData);
+    if (initialData) {
+        populateTable(initialData);
+        // Auto-render the chart with saved toggle states
+        setTimeout(() => generateBtn.click(), 0);
+    }
     ensureEmptyRows();
 
     document.querySelector('.data-input-table').addEventListener('paste', (e) => {
@@ -289,6 +320,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tableWrapper.style.display = 'block';
 
+        // Read toggle states
+        const showPercent   = document.getElementById('toggle-percent')?.checked   ?? true;
+        const showMonths    = document.getElementById('toggle-months')?.checked    ?? false;
+        const showQuarters  = document.getElementById('toggle-quarters')?.checked  ?? false;
+        const showSemesters = document.getElementById('toggle-semesters')?.checked ?? false;
+
+        // Show/hide period header rows
+        const monthsHeaderRow    = document.getElementById('months-header-row');
+        const quartersHeaderRow  = document.getElementById('quarters-header-row');
+        const semestersHeaderRow = document.getElementById('semesters-header-row');
+        if (monthsHeaderRow)    monthsHeaderRow.style.display    = showMonths    ? '' : 'none';
+        if (quartersHeaderRow)  quartersHeaderRow.style.display  = showQuarters  ? '' : 'none';
+        if (semestersHeaderRow) semestersHeaderRow.style.display = showSemesters ? '' : 'none';
+
         // Dynamic exact width compression locking the chart inside horizontal view
         const targetWrapper = document.getElementById('table-wrapper');
         const PADDING_X = 40; // Protect boundaries natively
@@ -377,6 +422,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
         timelineHeader.innerHTML = htmlTimelineHeader;
 
+        // ── Helper: build period bands ────────────────────────────────────────
+        const ROMAN = ['I','II','III','IV','V','VI'];
+
+        function buildPeriodBands(headerEl, periods) {
+            // periods: array of { start: Date, end: Date, label: string }
+            if (!headerEl) return;
+            headerEl.style.minWidth = `calc(${PADDING_X * 2}px + var(--day-width) * ${totalVisualDays})`;
+            let html = '';
+            for (const p of periods) {
+                const bandStart = p.start < minDate ? minDate : p.start;
+                const bandEnd   = p.end   > maxDate ? maxDate : p.end;
+                if (bandStart > maxDate || bandEnd < minDate) continue;
+                const leftVd  = mapVirtualDays(bandStart.getTime());
+                const rightVd = mapVirtualDays(bandEnd.getTime());
+                html += `<div class="month-band" style="left:calc(${PADDING_X}px + var(--day-width) * ${leftVd}); width:calc(var(--day-width) * ${Math.max(0.01, rightVd - leftVd)});">${p.label}</div>`;
+            }
+            headerEl.innerHTML = html;
+        }
+
+        // Build month bands
+        const monthsHeader = document.getElementById('months-header');
+        if (monthsHeader) {
+            if (showMonths) {
+                const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                const periods = [];
+                let cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+                while (cur <= maxDate) {
+                    periods.push({
+                        start: new Date(cur.getFullYear(), cur.getMonth(), 1),
+                        end:   new Date(cur.getFullYear(), cur.getMonth() + 1, 0),
+                        label: `${MONTHS_ES[cur.getMonth()]}-${cur.getFullYear()}`
+                    });
+                    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+                }
+                buildPeriodBands(monthsHeader, periods);
+            } else {
+                monthsHeader.innerHTML = '';
+                monthsHeader.style.minWidth = '';
+            }
+        }
+
+        // Build quarter bands
+        const quartersHeader = document.getElementById('quarters-header');
+        if (quartersHeader) {
+            if (showQuarters) {
+                const periods = [];
+                // Quarter start months: 0, 3, 6, 9
+                let startYear = minDate.getFullYear();
+                let startQ    = Math.floor(minDate.getMonth() / 3); // 0-based quarter index
+                let cur = new Date(startYear, startQ * 3, 1);
+                while (cur <= maxDate) {
+                    const qIdx  = Math.floor(cur.getMonth() / 3); // 0-based
+                    const qEnd  = new Date(cur.getFullYear(), qIdx * 3 + 3, 0); // last day of quarter
+                    periods.push({
+                        start: new Date(cur.getFullYear(), qIdx * 3, 1),
+                        end:   qEnd,
+                        label: `${ROMAN[qIdx]} Trimestre ${cur.getFullYear()}`
+                    });
+                    cur = new Date(cur.getFullYear(), qIdx * 3 + 3, 1);
+                }
+                buildPeriodBands(quartersHeader, periods);
+            } else {
+                quartersHeader.innerHTML = '';
+                quartersHeader.style.minWidth = '';
+            }
+        }
+
+        // Build semester bands
+        const semestersHeader = document.getElementById('semesters-header');
+        if (semestersHeader) {
+            if (showSemesters) {
+                const periods = [];
+                let startYear = minDate.getFullYear();
+                let startS    = minDate.getMonth() < 6 ? 0 : 1; // 0-based semester index
+                let cur = new Date(startYear, startS * 6, 1);
+                while (cur <= maxDate) {
+                    const sIdx = cur.getMonth() < 6 ? 0 : 1;
+                    const sEnd = new Date(cur.getFullYear(), sIdx * 6 + 6, 0); // last day of semester
+                    periods.push({
+                        start: new Date(cur.getFullYear(), sIdx * 6, 1),
+                        end:   sEnd,
+                        label: `${ROMAN[sIdx]} Semestre ${cur.getFullYear()}`
+                    });
+                    cur = new Date(cur.getFullYear(), sIdx * 6 + 6, 1);
+                }
+                buildPeriodBands(semestersHeader, periods);
+            } else {
+                semestersHeader.innerHTML = '';
+                semestersHeader.style.minWidth = '';
+            }
+        }
+
         function drawChartCell(item, type, contextLabel, isPhase, topOffset = null) {
             if (!item.start || !item.end) return '';
 
@@ -391,8 +528,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let valueDisplay = type === 'planned' ? item.planned : (type === 'actual' ? item.actual : 100);
 
-            let barFillHtml = `<div class="bar-fill" style="width: ${valueDisplay}%">
-                       <span class="percent-label" style="position:absolute; left: 6px;">${valueDisplay}%</span>
+            // Si el valor es null (campo vacío), no renderizar esta barra
+            if (valueDisplay === null && (type === 'planned' || type === 'actual')) return '';
+
+            // Unique bar ID for color persistence
+            const barId = `bar__${item.name}__${type}`.replace(/\s+/g, '_');
+            const savedColor = barColors[barId];
+            const colorOverride = savedColor ? `background:${savedColor} !important;` : '';
+
+            const pctLabel = showPercent ? `<span class="percent-label" style="position:absolute; left: 6px;">${valueDisplay}%</span>` : '';
+            let barFillHtml = `<div class="bar-fill" style="width: ${valueDisplay}%; ${savedColor ? `background:${savedColor};` : ''}">
+                       ${pctLabel}
                    </div>`;
 
             // Adjustments for non-phases (they keep centering)
@@ -413,14 +559,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 styleClass = '';
                 customPhaseBg = `height: 16px; border: 1px dashed var(--phase-planned-border); border-top: none; box-sizing: border-box; background: var(--border-color); border-radius: 0; position: relative;`;
                 
-                barFillHtml = `<div class="bar-fill" style="width: ${valueDisplay}%; height: 100%; background: var(--planned-color); border-radius: 0;">
-                       <span class="percent-label" style="position:absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.65rem;">${valueDisplay}% Plan</span>
+                barFillHtml = `<div class="bar-fill" style="width: ${valueDisplay}%; height: 100%; background: ${savedColor || 'var(--planned-color)'}; border-radius: 0;">
+                       ${showPercent ? `<span class="percent-label" style="position:absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.65rem;">${valueDisplay}% Plan</span>` : ''}
                    </div>`;
             } else if (isPhase && type === 'actual') {
                 styleClass = ''; 
                 customPhaseBg = `background: var(--border-color); border: 1px dashed var(--phase-planned-border); border-top: none; box-sizing: border-box; height: 16px; position: relative; border-radius: 0 0 4px 4px; overflow: hidden;`;
-                barFillHtml = `<div class="bar-fill" style="width: ${valueDisplay}%; height: 100%; background: var(--phase-actual-fill); border-radius: 0;">
-                    <span class="percent-label" style="position:absolute; left: 6px; top: 50%; transform: translateY(-50%); color: #ef4444; font-size: 0.65rem;">${valueDisplay}% Real</span>
+                barFillHtml = `<div class="bar-fill" style="width: ${valueDisplay}%; height: 100%; background: ${savedColor || 'var(--phase-actual-fill)'}; border-radius: 0;">
+                    ${showPercent ? `<span class="percent-label" style="position:absolute; left: 6px; top: 50%; transform: translateY(-50%); color: #ef4444; font-size: 0.65rem;">${valueDisplay}% Real</span>` : ''}
                 </div>`;
             } else if (!isPhase && type === 'planned') {
                 phaseTitleTag = ``; 
@@ -428,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return `
             <div class="chart-cell" title="${item.name} - ${contextLabel}">
-               <div class="bar-bg-container ${styleClass}" style="left: calc(${PADDING_X}px + var(--day-width) * ${leftDays}); width: calc(var(--day-width) * ${durationWidthFixed}); ${topStyle} ${customPhaseBg}">
+               <div class="bar-bg-container bar-clickable ${styleClass}" data-bar-id="${barId}" style="left: calc(${PADDING_X}px + var(--day-width) * ${leftDays}); width: calc(var(--day-width) * ${durationWidthFixed}); ${topStyle} ${customPhaseBg}">
                    ${phaseTitleTag}
                    ${barFillHtml}
                </div>
@@ -450,19 +596,26 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (lower.includes('calidad')) bg = 'var(--phase-qa-bg)';
             else if (lower.includes('producc')) bg = 'var(--phase-prod-bg)';
 
+            const barIdPlan   = `bar__${phase.name}__planned`.replace(/\s+/g, '_');
+            const barIdActual = `bar__${phase.name}__actual`.replace(/\s+/g, '_');
+            const barIdBox    = `bar__${phase.name}__phase-box`.replace(/\s+/g, '_');
+            const colorPlan   = barColors[barIdPlan]   || 'var(--planned-color)';
+            const colorActual = barColors[barIdActual] || 'var(--phase-actual-fill)';
+            const colorBox    = barColors[barIdBox]    || bg;
+
             return `
-            <div title="${phase.name}" style="position: absolute; left: calc(${PADDING_X}px + var(--day-width) * ${leftDays}); width: calc(var(--day-width) * ${durationWidthFixed}); top: 50%; transform: translateY(-50%); border: 1px dashed var(--phase-planned-border); border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; background: ${bg};">
+            <div class="bar-bg-container bar-clickable" data-bar-id="${barIdBox}" title="${phase.name}" style="position: absolute; left: calc(${PADDING_X}px + var(--day-width) * ${leftDays}); width: calc(var(--day-width) * ${durationWidthFixed}); top: 50%; transform: translateY(-50%); border: 1px dashed var(--phase-planned-border); border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; background: ${colorBox}; height: auto;">
                 <div style="height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.70rem; color: var(--text-main); font-weight: 700; border-bottom: 1px dashed var(--phase-planned-border); position: relative; z-index: 5;">
                     ${phase.name}
                 </div>
-                <div style="height: 18px; position: relative; background: var(--border-color); border-bottom: 1px dashed var(--phase-planned-border);">
-                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${phase.planned}%; background: var(--planned-color); opacity: 0.9;"></div>
-                    <span style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: var(--text-main); font-weight: 700; z-index: 2;">${phase.planned}% Plan</span>
-                </div>
-                <div style="height: 18px; position: relative; background: var(--border-color);">
-                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${phase.actual}%; background: var(--phase-actual-fill); opacity: 0.9;"></div>
-                    <span style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: #ef4444; font-weight: 700; z-index: 2;">${phase.actual}% Real</span>
-                </div>
+                ${phase.planned !== null ? `<div class="bar-bg-container bar-clickable" data-bar-id="${barIdPlan}" style="position:relative; height: 18px; background: var(--border-color); border-bottom: 1px dashed var(--phase-planned-border);">
+                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${phase.planned}%; background: ${colorPlan}; opacity: 0.9;"></div>
+                    ${showPercent ? `<span style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: var(--text-main); font-weight: 700; z-index: 2;">${phase.planned}% Plan</span>` : ''}
+                </div>` : ''}
+                ${phase.actual !== null ? `<div class="bar-bg-container bar-clickable" data-bar-id="${barIdActual}" style="position:relative; height: 18px; background: var(--border-color);">
+                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${phase.actual}%; background: ${colorActual}; opacity: 0.9;"></div>
+                    ${showPercent ? `<span style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: #ef4444; font-weight: 700; z-index: 2;">${phase.actual}% Real</span>` : ''}
+                </div>` : ''}
             </div>
             `;
         }
@@ -472,7 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasParentBars = deliverable.start !== null && deliverable.end !== null;
             
             let rowsForDiv = 0;
-            if (hasParentBars) rowsForDiv += 2;
+            if (hasParentBars) {
+                if (deliverable.planned !== null) rowsForDiv += 1;
+                if (deliverable.actual !== null) rowsForDiv += 1;
+            }
             if (hasPhases) rowsForDiv += deliverable.phases.length;
 
             if (rowsForDiv === 0) {
@@ -484,15 +640,34 @@ document.addEventListener('DOMContentLoaded', () => {
             let firstRowRendered = false;
 
             if (hasParentBars) {
-                htmlRows += `
-                <tr>
-                    <td rowspan="${rowsForDiv}" class="col-main">${deliverable.name}</td>
-                    <td class="col-timeline">${drawChartCell(deliverable, 'planned', 'Plan.', false)}</td>
-                </tr>
-                <tr>
-                    <td class="col-timeline" style="${delivBottomStyle}">${drawChartCell(deliverable, 'actual', 'Real', false)}</td>
-                </tr>
-                `;
+                const hasPlan = deliverable.planned !== null;
+                const hasActual = deliverable.actual !== null;
+
+                if (hasPlan && hasActual) {
+                    htmlRows += `
+                    <tr>
+                        <td rowspan="${rowsForDiv}" class="col-main">${deliverable.name}</td>
+                        <td class="col-timeline">${drawChartCell(deliverable, 'planned', 'Plan.', false)}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-timeline" style="${delivBottomStyle}">${drawChartCell(deliverable, 'actual', 'Real', false)}</td>
+                    </tr>
+                    `;
+                } else if (hasPlan) {
+                    htmlRows += `
+                    <tr>
+                        <td rowspan="${rowsForDiv}" class="col-main">${deliverable.name}</td>
+                        <td class="col-timeline" style="${delivBottomStyle}">${drawChartCell(deliverable, 'planned', 'Plan.', false)}</td>
+                    </tr>
+                    `;
+                } else if (hasActual) {
+                    htmlRows += `
+                    <tr>
+                        <td rowspan="${rowsForDiv}" class="col-main">${deliverable.name}</td>
+                        <td class="col-timeline" style="${delivBottomStyle}">${drawChartCell(deliverable, 'actual', 'Real', false)}</td>
+                    </tr>
+                    `;
+                }
                 firstRowRendered = true;
             }
 
@@ -582,47 +757,116 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const exportImgBtn = document.getElementById('export-img-btn');
-    if (exportImgBtn) {
-        exportImgBtn.addEventListener('click', () => {
-            if (!window.html2canvas) return alert("Cargando motor de renderizado...");
+    // ── Color Picker ──────────────────────────────────────────────────────────
+    const COLOR_PALETTE = [
+        '#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#10b981',
+        '#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#a855f7','#ec4899',
+        '#f43f5e','#64748b','#94a3b8','#cbd5e1','#1e293b','#0f172a','#ffffff',
+    ];
 
-            const targetElement = document.getElementById('gantt-table');
-            const wrapper = document.getElementById('table-wrapper');
+    const popover   = document.getElementById('color-picker-popover');
+    const swatchBox = document.getElementById('color-swatches');
+    const customColorInput = document.getElementById('custom-color-input');
+    const resetBtn  = document.getElementById('color-reset-btn');
 
-            const oldScrollLeft = wrapper.scrollLeft;
-            const oldScrollTop = wrapper.scrollTop;
-            wrapper.scrollLeft = 0;
-            wrapper.scrollTop = 0;
+    // Build swatches once
+    COLOR_PALETTE.forEach(hex => {
+        const sw = document.createElement('div');
+        sw.className = 'color-swatch';
+        sw.style.background = hex;
+        sw.style.border = hex === '#ffffff' ? '2px solid #cbd5e1' : '2px solid transparent';
+        sw.title = hex;
+        sw.addEventListener('click', () => applyBarColor(hex));
+        swatchBox.appendChild(sw);
+    });
 
-            const stickyElements = targetElement.querySelectorAll('.col-main, th');
-            stickyElements.forEach(el => {
-                el._origPos = el.style.position;
-                el.style.setProperty('position', 'relative', 'important');
-            });
+    let activeBarEl  = null;
+    let activeBarId  = null;
 
-            html2canvas(targetElement, {
-                scale: 3,
-                backgroundColor: "#ffffff",
-                useCORS: true
-            }).then(canvas => {
-                stickyElements.forEach(el => {
-                    el.style.position = el._origPos || '';
-                });
-                wrapper.scrollLeft = oldScrollLeft;
-                wrapper.scrollTop = oldScrollTop;
+    function openColorPopover(barEl, barId, event) {
+        event.stopPropagation();
+        // Deselect previous
+        document.querySelectorAll('.bar-selected').forEach(el => el.classList.remove('bar-selected'));
 
-                const link = document.createElement('a');
-                link.download = 'Avance de Proyecto.png';
-                link.href = canvas.toDataURL("image/png");
-                link.click();
-            }).catch(err => {
-                stickyElements.forEach(el => {
-                    el.style.position = el._origPos || '';
-                });
-                console.error(err);
-                alert("Ocurrió un error al intentar exportar la imagen.");
-            });
-        });
+        activeBarEl = barEl;
+        activeBarId = barId;
+        barEl.classList.add('bar-selected');
+
+        // Set custom input to current color
+        const current = barColors[barId];
+        customColorInput.value = current && current.startsWith('#') ? current : '#3b82f6';
+
+        // Position popover near the click
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        popover.style.display = 'block';
+        const pw = popover.offsetWidth  || 210;
+        const ph = popover.offsetHeight || 180;
+        let x = event.clientX + 8;
+        let y = event.clientY + 8;
+        if (x + pw > vw - 8) x = event.clientX - pw - 8;
+        if (y + ph > vh - 8) y = event.clientY - ph - 8;
+        popover.style.left = `${x}px`;
+        popover.style.top  = `${y}px`;
     }
-});
+
+    function applyBarColor(color) {
+        if (!activeBarEl || !activeBarId) return;
+        barColors[activeBarId] = color;
+        localStorage.setItem('ganttBarColors', JSON.stringify(barColors));
+
+        // Apply directly to the element — find the .bar-fill child if present
+        const fill = activeBarEl.querySelector('.bar-fill');
+        if (fill) {
+            fill.style.background = color;
+        } else {
+            // Phase box background
+            activeBarEl.style.background = color;
+        }
+        // Also update the inner colored div for phase sub-bars
+        const innerFill = activeBarEl.querySelector('div[style*="position: absolute"]');
+        if (innerFill) innerFill.style.background = color;
+    }
+
+    customColorInput.addEventListener('input', (e) => {
+        applyBarColor(e.target.value);
+    });
+
+    resetBtn.addEventListener('click', () => {
+        if (!activeBarId) return;
+        delete barColors[activeBarId];
+        localStorage.setItem('ganttBarColors', JSON.stringify(barColors));
+        closePopover();
+        generateBtn.click(); // Re-render to restore default color
+    });
+
+    function closePopover() {
+        popover.style.display = 'none';
+        document.querySelectorAll('.bar-selected').forEach(el => el.classList.remove('bar-selected'));
+        activeBarEl = null;
+        activeBarId = null;
+    }
+
+    // Delegate click on gantt tbody for bar-clickable elements
+    document.getElementById('gantt-tbody').addEventListener('click', (e) => {
+        const bar = e.target.closest('.bar-clickable');
+        if (bar && bar.dataset.barId) {
+            openColorPopover(bar, bar.dataset.barId, e);
+        }
+    });
+
+    // Close popover on outside click
+    document.addEventListener('click', (e) => {
+        if (popover.style.display !== 'none' && !popover.contains(e.target) && !e.target.closest('.bar-clickable')) {
+            closePopover();
+        }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePopover();
+    });
+    // ── End Color Picker ──────────────────────────────────────────────────────
+
+}); // end DOMContentLoaded
+

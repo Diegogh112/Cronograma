@@ -105,6 +105,7 @@ body {
     gap: 1.5rem;
     z-index: 20;
     box-shadow: 2px 0 10px rgba(0,0,0,0.02);
+    overflow: hidden;
 }
 
 .branding h1 { 
@@ -123,7 +124,7 @@ body {
     font-weight: 400; 
 }
 
-.input-section { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+.input-section { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; overflow: hidden; }
 .input-section label { font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
 
 textarea { 
@@ -150,7 +151,9 @@ textarea:focus {
 
 .input-table-container { 
     flex: 1; 
-    overflow: auto; 
+    overflow-y: auto;
+    overflow-x: auto;
+    min-height: 80px;
     border: 1px solid var(--border-color); 
     border-radius: 6px; 
     background: var(--input-table-bg);
@@ -393,6 +396,186 @@ button:hover { background: var(--primary-hover); }
 
 .phase-actual-custom .percent-label {
     color: #ef4444; /* Texto de porcentaje porcentaje color rojo como en la muestra de la imagen */
+}
+
+/* Toggle options */
+.toggle-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-track {
+    width: 32px;
+    height: 18px;
+    background: var(--border-color);
+    border-radius: 9px;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.toggle-label input:checked + .toggle-track {
+    background: var(--primary);
+}
+
+.toggle-label input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(14px);
+}
+
+/* Month band in timeline header */
+.month-band {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-right: 1px solid var(--border-color);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-main);
+    background: var(--panel-bg);
+    overflow: hidden;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+#months-header {
+    padding: 0;
+    overflow: visible;
+}
+
+/* Color picker popover */
+.color-popover {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.75rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    min-width: 200px;
+    animation: popover-in 0.15s ease;
+}
+
+@keyframes popover-in {
+    from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.color-popover-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.color-swatches {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 0.6rem;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.1s, border-color 0.1s;
+}
+
+.color-swatch:hover {
+    transform: scale(1.2);
+    border-color: var(--text-main);
+}
+
+.color-popover-custom {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.color-popover-custom label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-main);
+    flex: 1;
+}
+
+.color-popover-custom input[type="color"] {
+    width: 36px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 1px;
+    cursor: pointer;
+    background: none;
+}
+
+.color-reset-btn {
+    width: 100%;
+    background: var(--input-th-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    font-size: 0.78rem;
+    padding: 0.3rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    flex: none;
+}
+
+.color-reset-btn:hover {
+    background: var(--border-color);
+}
+
+/* Clickable bar highlight */
+.bar-bg-container.bar-clickable {
+    cursor: pointer;
+    transition: filter 0.15s, outline 0.15s;
+}
+.bar-bg-container.bar-clickable:hover {
+    filter: brightness(1.1);
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+.bar-bg-container.bar-selected {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .toast-notification {

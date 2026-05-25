@@ -54,6 +54,28 @@
                         <option value="vibrant">🎨 Moderno</option>
                     </select>
                 </div>
+                <div class="toggle-options">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-percent" checked>
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Mostrar % en barras
+                    </label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-months">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Mostrar meses en cronograma
+                    </label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-quarters">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Mostrar trimestres en cronograma
+                    </label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="toggle-semesters">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Mostrar semestres en cronograma
+                    </label>
+                </div>
                 <div class="action-buttons">
                     <button id="generate-btn">Generar Gráfico</button>
                     <button id="fullscreen-btn" style="display:none;" title="Ver Completo">Ver en Pantalla
@@ -93,6 +115,20 @@
             <div class="table-wrapper" id="table-wrapper" style="display: none;">
                 <table class="gantt-table" id="gantt-table">
                     <thead>
+                        <tr id="semesters-header-row" style="display:none;">
+                            <th class="col-main" style="border-top:none; border-left:none;"></th>
+                            <th class="col-timeline" id="semesters-header"></th>
+                        </tr>
+                        <tr id="quarters-header-row" style="display:none;">
+                            <th class="col-main" style="border-top:none; border-left:none;"></th>
+                            <th class="col-timeline" id="quarters-header"></th>
+                        </tr>
+                        <tr id="months-header-row" style="display:none;">
+                            <th class="col-main" style="border-top:none; border-left:none;"></th>
+                            <th class="col-timeline" id="months-header">
+                                <!-- Month bands injected here -->
+                            </th>
+                        </tr>
                         <tr>
                             <th class="col-main" style="border-top:none; border-left:none;"></th>
                             <th class="col-timeline" id="timeline-header">
@@ -107,6 +143,15 @@
             </div>
 
         </main>
+    </div>
+    <div id="color-picker-popover" class="color-popover" style="display:none;">
+        <div class="color-popover-title">Color de barra</div>
+        <div class="color-swatches" id="color-swatches"></div>
+        <div class="color-popover-custom">
+            <label>Personalizado</label>
+            <input type="color" id="custom-color-input">
+        </div>
+        <button id="color-reset-btn" class="color-reset-btn">Restablecer</button>
     </div>
     <script src="script.js"></script>
 </body>

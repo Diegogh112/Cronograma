@@ -615,7 +615,8 @@ tr:has(#timeline-header) th {
     position: absolute;
     top: 0;
     height: 100%;
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid rgba(255, 255, 255, 0.3); /* Borde derecho sutil para diferenciar periodos */
+    border-left: 1px solid rgba(255, 255, 255, 0.3);  /* Borde izquierdo sutil */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -629,7 +630,7 @@ tr:has(#timeline-header) th {
     transition: all 0.2s ease;
     z-index: 20;
     margin: 0;
-    left: 0; /* Asegurar que no haya desfase por padding heredado */
+    left: 0;
 }
 
 /* Eliminar bordes de celdas de periodos superiores para que no haya líneas rojas/grises extra */

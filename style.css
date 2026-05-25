@@ -638,33 +638,40 @@ tr:has(#timeline-header) th {
 
 .month-band.rotated {
     writing-mode: vertical-rl;
-    transform: rotate(180deg); /* Sentido horario: el texto se lee de arriba a abajo con el tope a la derecha */
-    font-size: 0.7rem;
+    transform: rotate(180deg); /* Cambiado para que el texto se lea de abajo hacia arriba */
+    font-size: 0.75rem;
     padding: 4px 0;
     height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
+    text-align: center;
 }
 
-.gantt-header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 10px 0;
-    background: var(--bg-color);
+/* Eliminar clases antiguas de logo */
+.gantt-header-top, .logo-container, #bn-logo, .logo-in-header {
+    display: none !important;
 }
 
-.logo-container {
-    width: 180px; /* Igual que col-main */
+.logo-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 100;
+    pointer-events: none;
+    overflow: hidden;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
-#bn-logo {
-    max-width: 150px;
-    height: auto;
+.logo-bn-img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
 }
 
 .main-column-header {

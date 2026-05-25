@@ -381,6 +381,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (semestersHeaderRow) semestersHeaderRow.style.display = showSemesters ? '' : 'none';
         if (yearsHeaderRow)     yearsHeaderRow.style.display     = showYears     ? '' : 'none';
 
+        // ── Logo Management (Solo visual, no en descarga) ────────────────────
+        const headerRowsInfo = [
+            { id: 'years-header-row', visible: showYears },
+            { id: 'semesters-header-row', visible: showSemesters },
+            { id: 'quarters-header-row', visible: showQuarters },
+            { id: 'months-header-row', visible: showMonths }
+        ];
+
+        // Limpiar contenido de todas las celdas col-main de la cabecera
+        document.querySelectorAll('.gantt-table thead .col-main').forEach(th => {
+            if (th.id !== 'editable-column-name') th.innerHTML = '';
+        });
+
+        const activeRows = headerRowsInfo.filter(r => r.visible);
+        if (activeRows.length > 0) {
+            // Inyectamos el logo en la primera celda visible
+            const firstTh = document.querySelector(`#${activeRows[0].id} .col-main`);
+            if (firstTh) {
+                // El logo se posicionará de forma absoluta respecto a este th para flotar sobre el espacio
+                const totalHeight = activeRows.length * 35; // Cada fila mide 35px
+                firstTh.style.position = 'relative';
+                firstTh.innerHTML = `
+                    <div class="logo-overlay" style="height: ${totalHeight}px;">
+                        <img src="images/logobn-compartir (2).png" alt="BN" class="logo-bn-img" onerror="this.style.display='none'">
+                    </div>
+                `;
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Clear header th content (redundante, ya se hizo arriba pero para mantener estructura)
+        // document.querySelectorAll('.gantt-table thead .col-main').forEach(th => {
+        //     if (th.id !== 'editable-column-name') th.innerHTML = '';
+        // });
+
         // Determinar si hay algún encabezado superior activo
         const anyPeriodActive = showMonths || showQuarters || showSemesters || showYears;
         if (anyPeriodActive) {
@@ -402,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Dynamic exact width compression locking the chart inside horizontal view
         const targetWrapper = document.getElementById('table-wrapper');
-        const PADDING_X = 0; // Eliminado el espacio entre la columna y el inicio del cronograma
+        const PADDING_X = showDates ? 30 : 0; // Espacio solo si se añaden fechas para evitar cortes
         const availablePixels = targetWrapper.clientWidth - 100 - (PADDING_X * 2);
         const dynamicDayWidth = Math.max(0.01, availablePixels / Math.max(1, totalVisualDays));
         document.documentElement.style.setProperty('--day-width', `${dynamicDayWidth}px`);
@@ -996,68 +1031,95 @@ document.addEventListener('DOMContentLoaded', () => {
             const ganttTable = document.getElementById('gantt-table');
             if (!container || !ganttTable) return;
 
-            // Calcular altura real: logo-header + tabla
-            const headerHeight = document.querySelector('.gantt-header-top')?.offsetHeight || 0;
-            const tableHeight = ganttTable.offsetHeight;
-            const totalCaptureHeight = headerHeight + tableHeight + 40; // Aumentado el margen de 10 a 40 para que se vea la última fila
+            showToast("Generando imagen... por favor espera");
 
             // Asegurar que el scroll horizontal esté al inicio
             const tableWrapper = document.getElementById('table-wrapper');
             const originalScrollLeft = tableWrapper.scrollLeft;
             tableWrapper.scrollLeft = 0;
 
+            // Altura real basada en la tabla
+            const tableHeight = ganttTable.offsetHeight;
+            const totalCaptureHeight = tableHeight + 50;
+            const totalCaptureWidth = container.scrollWidth;
+
+            // Si el ancho es excesivo (> 5000px), bajamos la escala para evitar errores de memoria
+            let captureScale = 1;
+            if (totalCaptureWidth > 5000) captureScale = 0.8;
+            if (totalCaptureWidth > 8000) captureScale = 0.6;
+
             html2canvas(container, {
                 backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg-color'),
-                scale: 3, 
-                useCORS: true,
+                scale: captureScale, 
+                useCORS: false,
                 logging: false,
-                scrollX: 0,
-                scrollY: 0,
-                width: container.scrollWidth,
-                height: totalCaptureHeight, // Usar la altura real calculada
+                allowTaint: true,
+                imageTimeout: 5000,
+                removeContainer: true,
+                width: totalCaptureWidth,
+                height: totalCaptureHeight,
                 onclone: (clonedDoc) => {
                     const clonedBody = clonedDoc.body;
                     clonedBody.setAttribute('data-theme', document.body.getAttribute('data-theme'));
                     
+                    // Ocultar el logo en la descarga como se solicitó
+                    const clonedLogoOverlay = clonedDoc.querySelector('.logo-overlay');
+                    if (clonedLogoOverlay) {
+                        clonedLogoOverlay.style.display = 'none';
+                    }
+
                     const clonedContainer = clonedDoc.getElementById('gantt-container-to-export');
                     if (clonedContainer) {
-                        clonedContainer.style.width = container.scrollWidth + 'px';
+                        clonedContainer.style.width = totalCaptureWidth + 'px';
                         clonedContainer.style.height = totalCaptureHeight + 'px';
-                        clonedContainer.style.overflow = 'hidden'; // Evitar scrollbars en captura
+                        clonedContainer.style.overflow = 'visible';
                         clonedContainer.style.background = getComputedStyle(document.body).getPropertyValue('--bg-color');
                     }
 
-                    // Limitar la altura de las líneas guía en el clon para que no estiren el scrollHeight
-                    clonedDoc.querySelectorAll('.date-line').forEach(line => {
-                        line.style.height = tableHeight + 'px';
-                    });
-
-                    // Forzar visualización del logo en el clon
-                    const clonedLogo = clonedDoc.getElementById('bn-logo');
-                    if (clonedLogo) {
-                        clonedLogo.style.display = 'block';
+                    const clonedTable = clonedDoc.getElementById('gantt-table');
+                    if (clonedTable) {
+                        clonedTable.style.width = totalCaptureWidth + 'px';
                     }
 
-                    // Corregir rotación para html2canvas
+                    // Asegurar que las fechas rotadas se vean igual que en la web
                     clonedDoc.querySelectorAll('.month-band.rotated').forEach(el => {
-                        el.style.writingMode = 'vertical-rl';
-                        el.style.transform = 'none'; 
+                        // Resetear estilos para usar un método más compatible con html2canvas
+                        el.style.writingMode = 'horizontal-tb';
+                        el.style.transform = 'none';
                         el.style.display = 'flex';
                         el.style.alignItems = 'center';
                         el.style.justifyContent = 'center';
                         el.style.height = '80px';
+                        
+                        const span = el.querySelector('span');
+                        if (span) {
+                            span.style.display = 'block';
+                            span.style.transform = 'rotate(-90deg)'; // Rotación de 90° anti-horaria para que se lea de abajo a arriba
+                            span.style.whiteSpace = 'nowrap';
+                            span.style.width = '80px'; // Forzar ancho para que no se corte al rotar
+                            span.style.textAlign = 'center';
+                        }
                     });
                 }
             }).then(canvas => {
                 tableWrapper.scrollLeft = originalScrollLeft;
-                canvas.toBlob(blob => {
-                    saveAs(blob, `cronograma_${new Date().getTime()}.png`);
-                });
-                showToast("Imagen generada correctamente");
+                try {
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            saveAs(blob, `cronograma_${new Date().getTime()}.png`);
+                            showToast("Imagen generada correctamente");
+                        } else {
+                            throw new Error("Blob nulo");
+                        }
+                    }, 'image/png');
+                } catch (e) {
+                    console.error("Error al procesar el canvas:", e);
+                    showToast("Error de memoria. Intenta desactivar algunas opciones.");
+                }
             }).catch(err => {
                 tableWrapper.scrollLeft = originalScrollLeft;
-                console.error("Error al exportar imagen:", err);
-                showToast("Error al generar la imagen");
+                console.error("Error crítico en exportación:", err);
+                showToast("Error persistente. Prueba reduciendo el número de meses visibles.");
             });
         });
     }
